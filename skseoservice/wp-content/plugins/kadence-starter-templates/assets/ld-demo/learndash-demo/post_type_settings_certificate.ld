@@ -1,1 +1,0 @@
-[{"name":"LearnDash_Settings_Certificates_Styles","fields":{"styles":""}},{"name":"LearnDash_Settings_Certificates_CPT","fields":{"supports":["thumbnail","revisions"]}}]
