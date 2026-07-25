@@ -1,0 +1,18 @@
+# Ignore WAMP server default files in the parent directory
+../add_vhost.php
+../index.php
+../favicon.ico
+../test_sockets.php
+../testmysql.php
+../wamplangues/
+../wampthemes/
+
+# Ignore backups, database dumps, and zip files
+../*.sql
+../*.zip
+
+# Ignore other project folders
+../email_reader/
+../python/
+../seoservicessk/
+../wordpress/
