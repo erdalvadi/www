@@ -4,13 +4,7 @@
 
 (function() {
     'use strict';
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-    
+
     function init() {
         var app = new GPLSitesApp();
         app.init();
@@ -1151,5 +1145,23 @@
             btn.disabled = false;
         });
     };
-    
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
 })();
+
+// Change from: $('.pagination-btn').on('click', ...)
+// Change to this delegated approach:
+$(document).on('click', '.pagination-btn, .prev-page, .next-page, a.page-numbers', function(e) {
+    e.preventDefault();
+    
+    // Get the page target number from your element attribute
+    var targetPage = $(this).data('page') || $(this).attr('href'); 
+    
+    // Trigger your filtering/pagination logic
+    gpl_filter_sites(targetPage);
+});

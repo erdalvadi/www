@@ -91,3 +91,9 @@ class GPL_Sites_Marketplace {
 }
 
 GPL_Sites_Marketplace::get_instance();
+
+//Frontend logout redirect to dashboard
+add_action('wp_logout',function(){
+    wp_safe_redirect(home_url());
+    exit;
+});
