@@ -57,7 +57,7 @@ $stats = array(
         <div class="gpl-dashboard-actions">
             <a href="<?php echo home_url('/add-site/'); ?>" class="gpl-btn gpl-btn-primary">+ Add New Site</a>
             <a href="<?php echo home_url('/marketplace/'); ?>" class="gpl-btn gpl-btn-secondary">Browse Sites</a>
-            <a href="<?php echo wp_logout_url(home_url()); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
+            <a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
         </div>
     </div>
 

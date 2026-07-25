@@ -13,6 +13,35 @@ class GPL_Sites_User_Roles {
     public static function init() {
         add_action('init', array(__CLASS__, 'register_roles'));
         add_action('user_register', array(__CLASS__, 'assign_default_role'), 10, 1);
+        add_filter('logout_redirect', array(__CLASS__, 'force_logout_redirect'), 10, 3);
+        add_filter('show_admin_bar', array(__CLASS__, 'hide_admin_bar_for_non_admins'));
+    }
+
+    /**
+     * Always send users to the site home URL after logout,
+     * no matter which logout link/button was clicked (frontend,
+     * admin bar, or any redirect_to that was empty or missing).
+     */
+    public static function force_logout_redirect($redirect_to, $requested_redirect_to, $user) {
+        return home_url('/');
+    }
+
+    /**
+     * Hide the black WP admin toolbar on the frontend for every
+     * logged-in user except administrators. This only affects the
+     * toolbar display (is_admin_bar_showing()) - it does not touch
+     * capabilities, wp-admin access, AJAX, or any form validation.
+     */
+    public static function hide_admin_bar_for_non_admins($show) {
+        if (is_admin()) {
+            return $show; // never touch the toolbar inside wp-admin
+        }
+
+        if (current_user_can('administrator')) {
+            return $show; // leave the site owner's preference alone
+        }
+
+        return false;
     }
     
     /**

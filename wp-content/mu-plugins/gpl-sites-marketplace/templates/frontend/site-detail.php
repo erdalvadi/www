@@ -315,7 +315,7 @@ $share_title = urlencode($site_name . " - Guest Post Opportunity");
                 $user = wp_get_current_user();
             ?>
                 <span class="gpl-user-greeting">Hello, <?php echo esc_html($user->display_name); ?></span>
-                <a href="<?php echo wp_logout_url(home_url()); ?>" class="gpl-btn gpl-btn-outline gpl-btn-sm">Logout</a>
+                <a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="gpl-btn gpl-btn-outline gpl-btn-sm">Logout</a>
             <?php else: ?>
                 <a href="<?php echo home_url('/login/'); ?>" class="gpl-btn gpl-btn-primary gpl-btn-sm">Login</a>
             <?php endif; ?>

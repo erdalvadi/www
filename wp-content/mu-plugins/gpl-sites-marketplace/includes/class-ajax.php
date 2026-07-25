@@ -129,7 +129,7 @@ class GPL_Sites_AJAX {
         $page = isset($_POST['page']) ? max(1, intval($_POST['page'])) : 1;
         $offset = ($page - 1) * $per_page;
 
-        $where = array("status = 'active'");
+        $where = array("status = 'active'", "approval_status = 'approved'");
         $values = array();
 
         if (!empty($_POST['niche'])) {
@@ -209,15 +209,20 @@ class GPL_Sites_AJAX {
         $sites = $wpdb->get_results($wpdb->prepare($query, $query_values), ARRAY_A);
 
         $wishlist_ids = array();
+        $can_wishlist = is_user_logged_in() && (gpl_is_buyer() || gpl_is_admin());
         if (is_user_logged_in()) {
             $wishlist_ids = GPL_Sites_Database::get_user_wishlist_ids(get_current_user_id());
         }
 
+        $url_limit = gpl_get_url_limit();
+
         ob_start();
         if (!empty($sites)) {
+            $position = $offset;
             foreach ($sites as $site) {
+                $position++;
                 $in_wishlist = in_array($site['id'], $wishlist_ids);
-                $this->render_site_card($site, $in_wishlist);
+                $this->render_site_card($site, $position, $url_limit, $in_wishlist, $can_wishlist);
             }
         } else {
             echo '<div class="gpl-no-results"><p>No sites found matching your criteria.</p></div>';
@@ -234,57 +239,93 @@ class GPL_Sites_AJAX {
         ));
     }
 
-    private function render_site_card($site, $in_wishlist = false) {
+    private function render_site_card($site, $position = 1, $url_limit = 0, $in_wishlist = false, $can_wishlist = false) {
+        $is_admin = gpl_is_admin();
+        $show_url = ($is_admin || $url_limit === 0 || $position <= $url_limit);
+
+        $site_id = intval($site['id']);
         $da = intval($site['domain_authority'] ?? 0);
         $dr = intval($site['domain_rating'] ?? 0);
-        $traffic = intval($site['ahrefs_traffic'] ?? 0);
+        $as = intval($site['authority_score'] ?? 0);
         $price = floatval($site['price'] ?? 0);
-        $website_url = esc_attr($site['website_url'] ?? '');
-        $website_name = esc_html($site['website_name'] ?? $website_url);
+        $sale_price = !empty($site['sale_price']) ? floatval($site['sale_price']) : null;
         $niche = esc_html($site['niche'] ?? 'General');
-        $site_id = intval($site['id']);
-        
-        $wishlist_class = $in_wishlist ? 'gpl-wishlisted' : '';
-        $wishlist_icon = $in_wishlist ? '♥' : '♡';
-        
-        $traffic_display = $traffic >= 1000000 ? number_format($traffic / 1000000, 1) . 'M' : 
-                          ($traffic >= 1000 ? number_format($traffic / 1000, 1) . 'K' : number_format($traffic));
+        $link_type = esc_html($site['link_type'] ?? '');
+        $country_code = esc_html($site['country_code'] ?? '');
+
+        $website_url = $site['website_url'] ?? '';
+        $website_name = $site['website_name'] ?: $website_url;
+        $detail_url = gpl_get_site_detail_url($site);
+        $favicon = gpl_get_local_favicon($website_url);
+        $traffic_display = gpl_format_number($site['ahrefs_traffic'] ?? 0);
         ?>
-        <div class="gpl-site-card" data-site-id="<?php echo $site_id; ?>">
+        <div class="gpl-site-card <?php echo !$show_url ? 'gpl-url-hidden' : ''; ?>" data-id="<?php echo $site_id; ?>" data-position="<?php echo intval($position); ?>">
             <div class="gpl-card-header">
                 <div class="gpl-site-info">
-                    <img src="https://www.google.com/s2/favicons?domain=<?php echo $website_url; ?>&sz=32" alt="" class="gpl-favicon">
+                    <img src="<?php echo esc_attr($favicon); ?>" alt="" class="gpl-site-favicon">
                     <div class="gpl-site-details">
-                        <h3 class="gpl-site-name"><?php echo $website_name; ?></h3>
-                        <span class="gpl-site-url"><?php echo $website_url; ?></span>
+                        <a href="<?php echo esc_url($detail_url); ?>" class="gpl-site-name">
+                            <?php echo esc_html($website_name); ?>
+                        </a>
+                        <?php if ($show_url): ?>
+                            <span class="gpl-site-domain">
+                                <a href="https://<?php echo esc_attr($website_url); ?>" target="_blank" rel="noopener">
+                                    <?php echo esc_html($website_url); ?>
+                                </a>
+                            </span>
+                        <?php else: ?>
+                            <span class="gpl-site-domain gpl-url-locked">
+                                🔒 URL Hidden - <a href="<?php echo esc_url($detail_url); ?>">View Details</a>
+                            </span>
+                        <?php endif; ?>
                     </div>
                 </div>
-                <button type="button" class="gpl-wishlist-btn <?php echo $wishlist_class; ?>" data-site-id="<?php echo $site_id; ?>" title="<?php echo $in_wishlist ? 'Remove from wishlist' : 'Add to wishlist'; ?>">
-                    <span class="gpl-heart"><?php echo $wishlist_icon; ?></span>
-                </button>
+                <?php if ($can_wishlist): ?>
+                    <button class="gpl-wishlist-btn <?php echo $in_wishlist ? 'gpl-wishlisted' : ''; ?>"
+                            data-site-id="<?php echo $site_id; ?>">
+                        <?php echo $in_wishlist ? '❤️' : '🤍'; ?>
+                    </button>
+                <?php endif; ?>
             </div>
-            
+
             <div class="gpl-card-metrics">
                 <div class="gpl-metric">
                     <span class="gpl-metric-label">DA</span>
-                    <span class="gpl-metric-value"><?php echo $da; ?></span>
+                    <span class="gpl-metric-value gpl-da"><?php echo $da; ?></span>
                 </div>
                 <div class="gpl-metric">
                     <span class="gpl-metric-label">DR</span>
-                    <span class="gpl-metric-value"><?php echo $dr; ?></span>
+                    <span class="gpl-metric-value gpl-dr"><?php echo $dr; ?></span>
+                </div>
+                <div class="gpl-metric">
+                    <span class="gpl-metric-label">AS</span>
+                    <span class="gpl-metric-value gpl-as"><?php echo $as; ?></span>
                 </div>
                 <div class="gpl-metric">
                     <span class="gpl-metric-label">Traffic</span>
                     <span class="gpl-metric-value"><?php echo $traffic_display; ?></span>
                 </div>
             </div>
-            
+
             <div class="gpl-card-footer">
-                <span class="gpl-niche-tag"><?php echo $niche; ?></span>
-                <span class="gpl-price">$<?php echo number_format($price, 0); ?></span>
+                <div class="gpl-card-tags">
+                    <span class="gpl-tag gpl-tag-niche"><?php echo $niche; ?></span>
+                    <span class="gpl-tag gpl-tag-link"><?php echo $link_type; ?></span>
+                    <span class="gpl-tag gpl-tag-country"><?php echo $country_code; ?></span>
+                </div>
+                <div class="gpl-card-price">
+                    <?php if ($sale_price && $sale_price < $price): ?>
+                        <span class="gpl-original-price">$<?php echo number_format($price, 0); ?></span>
+                        <span class="gpl-sale-price">$<?php echo number_format($sale_price, 0); ?></span>
+                    <?php else: ?>
+                        <span class="gpl-price">$<?php echo number_format($price, 0); ?></span>
+                    <?php endif; ?>
+                </div>
             </div>
-            
-            <a href="<?php echo home_url('/site/' . $site_id . '/'); ?>" class="gpl-card-link"></a>
+
+            <div class="gpl-card-actions">
+                <a href="<?php echo esc_url($detail_url); ?>" class="gpl-btn gpl-btn-small gpl-btn-primary">View Details</a>
+            </div>
         </div>
         <?php
     }
@@ -315,6 +356,10 @@ class GPL_Sites_AJAX {
     }
 
     public function gpl_validate_email() {
+        if (!$this->verify_nonce()) {
+            $this->send_error('Security check failed', 403);
+        }
+
         $email = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
         
         if (empty($email) || !is_email($email)) {
@@ -331,6 +376,10 @@ class GPL_Sites_AJAX {
     }
 
     public function gpl_login() {
+        if (!$this->verify_nonce()) {
+            $this->send_error('Security check failed', 403);
+        }
+
         $username = isset($_POST['username']) ? sanitize_text_field($_POST['username']) : '';
         $password = isset($_POST['password']) ? $_POST['password'] : '';
         
@@ -367,6 +416,10 @@ class GPL_Sites_AJAX {
     }
 
     public function gpl_register() {
+        if (!$this->verify_nonce()) {
+            $this->send_error('Security check failed', 403);
+        }
+
         $username = isset($_POST['username']) ? sanitize_user($_POST['username']) : '';
         $email = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
         $password = isset($_POST['password']) ? $_POST['password'] : '';

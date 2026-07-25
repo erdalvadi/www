@@ -23,7 +23,7 @@ if (is_user_logged_in()) {
                 <a href="<?php echo home_url('/seller-dashboard/'); ?>" class="gpl-btn gpl-btn-secondary">Seller Dashboard</a>
                 <a href="<?php echo home_url('/add-site/'); ?>" class="gpl-btn gpl-btn-secondary">Add Site</a>
             <?php endif; ?>
-            <a href="<?php echo wp_logout_url(home_url()); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
+            <a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
         </div>
     </div>
 </div>

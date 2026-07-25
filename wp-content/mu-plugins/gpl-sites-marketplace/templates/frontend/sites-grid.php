@@ -67,7 +67,7 @@ $can_wishlist = $is_logged_in && ($is_buyer || $is_admin);
                     <a href="<?php echo home_url('/buyer-dashboard/'); ?>" class="gpl-btn gpl-btn-outline">Buyer</a>
                     <a href="<?php echo home_url('/add-site/'); ?>" class="gpl-btn gpl-btn-primary">+ Add</a>
                 <?php endif; ?>
-                <a href="<?php echo wp_logout_url(home_url()); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
+                <a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>" class="gpl-btn gpl-btn-outline">Logout</a>
             <?php else: ?>
                 <a href="<?php echo home_url('/login/'); ?>" class="gpl-btn gpl-btn-primary">Login / Register</a>
             <?php endif; ?>

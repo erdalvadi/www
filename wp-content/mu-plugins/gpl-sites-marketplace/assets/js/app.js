@@ -4,7 +4,7 @@
 
 (function() {
     'use strict';
-
+    
     function init() {
         var app = new GPLSitesApp();
         app.init();
@@ -433,10 +433,15 @@
             credentials: 'same-origin'
         })
         .then(function(response) {
-            if (!response.ok) {
-                throw new Error('Network response was not ok: ' + response.status);
-            }
-            return response.json();
+            // WordPress's wp_send_json_error() intentionally sends a real
+            // HTTP status (400/401/403/404) for validation and permission
+            // errors, but the response body still contains the actual
+            // { success:false, data:{ message:'...' } } payload we need.
+            // Parse it regardless of status - only an unparseable body
+            // (a real network/server failure) should fall through to catch.
+            return response.json().catch(function() {
+                throw new Error('Invalid server response (status ' + response.status + ')');
+            });
         })
         .then(function(result) {
             if (callback) callback(result);
@@ -1145,86 +1150,11 @@
             btn.disabled = false;
         });
     };
-
+    
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
+    
 })();
-
-
-// Change from: $('.pagination-btn').on('click', ...)
-// Change to this delegated approach:
-$(document).on('click', '.pagination-btn, .prev-page, .next-page, a.page-numbers', function(e) {
-    e.preventDefault();
-    
-    // Get the page target number from your element attribute
-    var targetPage = $(this).data('page') || $(this).attr('href'); 
-    
-    // Trigger your filtering/pagination logic
-    gpl_filter_sites(targetPage);
-});
-
-jQuery(document).document.ready(function($) {
-    /**
-     * 1. FIXED PAGINATION (Event Delegation)
-     * Listens globally. Works even after PHP rewrites the inner HTML elements.
-     */
-    $(document).on('click', '.pagination a, .page-numbers, .next, .prev', function(e) {
-        e.preventDefault();
-        
-        // Extract the target page number from WordPress pagination native classes or attributes
-        var targetPage = 1;
-        var href = $(this).attr('href');
-        
-        if (href) {
-            var match = href.match(/paged=(\d+)/);
-            if (match) {
-                targetPage = parseInt(match[1]);
-            } else {
-                // If pretty permalinks are used (/page/2/)
-                var cleanPath = href.replace(/\/$/, "");
-                var num = cleanPath.substring(cleanPath.lastIndexOf('/') + 1);
-                if (!isNaN(num)) {
-                    targetPage = parseInt(num);
-                }
-            }
-        } else {
-            targetPage = $(this).data('page');
-        }
-
-        if (targetPage) {
-            // Trigger your filtering function with the explicit new page state
-            gpl_filter_sites_action(targetPage);
-        }
-    });
-
-    /**
-     * 2. FORCED NEW TABS FOR CARDS
-     * Intercepts "View Details" clicks safely across dynamic updates.
-     */
-    $(document).on('click', '.gpl-site-card a, a.view-details, .gpl-marketplace-container a', function(e) {
-        var url = $(this).attr('href');
-        
-        // Prevent default only if it's an outbound/details asset link to manage target windows
-        if (url && !url.startsWith('#') && !url.includes('javascript:void')) {
-            e.preventDefault();
-            window.open(url, '_blank', 'noopener,noreferrer');
-        }
-    });
-});
-
-/**
- * Clean wrapper invocation function matching your architecture
- */
-function gpl_filter_sites_action(pageNumber) {
-    // 1. Update your hidden pagination state tracking element
-    jQuery('#gpl-filter-page-input').val(pageNumber); 
-    
-    // 2. Fire your core fetch/ajax call payload block (your gpl_filter_sites backend script)
-    // Make sure your AJAX call forwards the correct 'page': pageNumber parameter!
-    if (typeof gpl_filter_sites === "function") {
-        gpl_filter_sites(); 
-    }
-}
